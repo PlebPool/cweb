@@ -15,8 +15,8 @@ typedef struct {
 server_t server_create();
 void server_destroy(const server_t* server);
 
-#define S_O_PORT 1
-#define S_O_ASCII_ART 2
+#define S_O_PORT 1 // Port to be used by the server
+#define S_O_ASCII_ART 2 // Path to the ascii art file to be printed on startup
 int server_set_opt(server_t* server, int s_o_opt, void* s_o_arg);
 
 int server_start(server_t* server);
