@@ -73,12 +73,18 @@ int server_set_ascii_art(server_t* server, const cstring_t* ascii_art_path) {
     return 0;
 }
 
-int server_set_opt(server_t* server, int s_o_opt, void* s_o_arg) {
+int server_set_static_resource(server_t* server, const cstring_t* static_resource_path) {
+    return 0;
+}
+
+int server_set_opt(server_t* server, const int s_o_opt, void* s_o_arg) {
     switch (s_o_opt) {
         case S_O_PORT:
             return server_set_port(server, *(unsigned short*) s_o_arg);
-        case S_O_ASCII_ART:
+        case S_O_ASCII_ART_LOCATION:
             return server_set_ascii_art(server, s_o_arg);
+        case S_O_STATIC_RESOURCE_LOCATION:
+            return server_set_static_resource(server, s_o_arg);
         default:
             return -1;
     }

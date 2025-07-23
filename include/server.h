@@ -16,7 +16,8 @@ server_t server_create();
 void server_destroy(const server_t* server);
 
 #define S_O_PORT 1 // Port to be used by the server
-#define S_O_ASCII_ART 2 // Path to the ascii art file to be printed on startup
+#define S_O_ASCII_ART_LOCATION 2 // Path to the ascii art file to be printed on startup
+#define S_O_STATIC_RESOURCE_LOCATION 3
 int server_set_opt(server_t* server, int s_o_opt, void* s_o_arg);
 
 int server_start(server_t* server);
