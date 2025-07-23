@@ -4,16 +4,20 @@
 
 #ifndef SERVER_H
 #define SERVER_H
+#include "../../cstring/include/cstring.h"
 
 typedef struct {
     unsigned short port;
+    cstring_t* ascii_art_path;
+
 } server_t;
 
 server_t server_create();
-void server_destroy(server_t* server);
+void server_destroy(const server_t* server);
 
 #define S_O_PORT 1
-int server_ctl(server_t* server, int s_o_cmd, void* s_o_arg);
+#define S_O_ASCII_ART 2
+int server_set_opt(server_t* server, int s_o_opt, void* s_o_arg);
 
 int server_start(server_t* server);
 
