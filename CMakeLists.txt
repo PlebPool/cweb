@@ -7,6 +7,8 @@ include_directories(include)
 
 add_library(cweb STATIC library.c
         src/server.c
+        src/wsocket.c
+        include/wsocket.h
 )
 
 target_include_directories(cweb PUBLIC include)
