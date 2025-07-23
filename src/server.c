@@ -47,8 +47,10 @@ int server_set_port(server_t* server, unsigned short port) {
 }
 
 int server_set_ascii_art(server_t* server, const cstring_t* ascii_art_path) {
-    server->ascii_art_path = malloc(sizeof(cstring_t));
-    memcpy(server->ascii_art_path, ascii_art_path, sizeof(cstring_t));
+    cstring_t* string = malloc(sizeof(cstring_t));
+    string->buffer = malloc(ascii_art_path->size);
+    memcpy(string->buffer, ascii_art_path->buffer, ascii_art_path->size);
+    server->ascii_art_path = string;
     return 0;
 }
 
