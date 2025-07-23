@@ -3,12 +3,12 @@ project(cweb C)
 
 set(CMAKE_C_STANDARD 99)
 
+include_directories(include)
+
 add_library(cweb STATIC library.c
         src/server.c
 )
 
-include_directories(include)
-
-target_link_libraries(cweb PUBLIC cstring)
-
 target_include_directories(cweb PUBLIC include)
+
+target_link_libraries(cweb PRIVATE cstring)
