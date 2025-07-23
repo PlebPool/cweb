@@ -66,6 +66,9 @@ int server_set_opt(server_t* server, int s_o_opt, void* s_o_arg) {
 }
 
 int server_start(server_t* server) {
-    printf("server start\n");
+    if (server->ascii_art_path != NULL) {
+        print_file(server->ascii_art_path->buffer);
+    }
+    printf("server start on port %i\n", server->port);
     return 0;
 }
