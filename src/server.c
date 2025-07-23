@@ -3,11 +3,33 @@
 //
 #include "server.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <linux/limits.h>
 
 #include "cstring.h"
+#include <unistd.h>
+#include <syslog.h>
+
+void print_file(const char* filename) {
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s", filename);
+    FILE *fp = fopen(path, "r");
+
+    if (fp == NULL) {
+        syslog(LOG_ERR, "cannot open file %s: %s", path, strerror(errno));
+        return;
+    }
+
+    int ch;
+    while ((ch = fgetc(fp)) != EOF) {
+        printf("%c", ch);
+    }
+
+    fclose(fp);
+}
 
 server_t server_create() {
     const server_t server = {0};
