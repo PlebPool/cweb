@@ -20,6 +20,10 @@
 #include <signal.h>
 #include <stdatomic.h>
 
+#include "wthread.h"
+
+threadpool_t *threadpool;
+
 pthread_t server_thread;
 int exit_flag = 0;
 
@@ -159,6 +163,7 @@ void* server_thread_func(void* server_ptr) {
 }
 
 int server_start(server_t* server) {
+    threadpool = threadpool_create(4);
     syslog(LOG_INFO, "Server starting up...");
     pthread_create(&server_thread, NULL, server_thread_func, server);
 
@@ -175,5 +180,6 @@ int server_start(server_t* server) {
     pthread_cancel(server_thread);
     pthread_join(server_thread, NULL);
 
+    threadpool_destroy(threadpool);
     return 0;
 }

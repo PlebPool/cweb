@@ -57,6 +57,7 @@ threadpool_t* threadpool_create(int thread_count) {
         }
     }
 
+    syslog(LOG_INFO, "Thread pool created with %i threads.", thread_count);
     return pool;
 }
 
@@ -178,6 +179,8 @@ int threadpool_destroy(threadpool_t *pool) {
     pthread_cond_destroy(&pool->work_available);
     free(pool->threads);
     free(pool);
+
+    syslog(LOG_INFO, "Thread pool destroyed.");
 
     return 0;
 }
