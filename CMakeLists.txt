@@ -9,6 +9,8 @@ add_library(cweb STATIC library.c
         src/server.c
         src/wsocket.c
         include/wsocket.h
+        src/wthread.c
+        include/wthread.h
 )
 
 target_include_directories(cweb PUBLIC include)

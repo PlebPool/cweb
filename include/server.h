@@ -12,7 +12,7 @@ typedef struct {
 
 } server_t;
 
-server_t server_create();
+int server_init(server_t* server);
 void server_destroy(const server_t* server);
 
 #define S_O_PORT 1 // Port to be used by the server

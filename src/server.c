@@ -50,9 +50,8 @@ void print_file(const char* filename) {
     fclose(fp);
 }
 
-server_t server_create() {
-    const server_t server = {0};
-    return server;
+int server_init(server_t* server) {
+    return 0;
 }
 
 void server_destroy(const server_t* server) {
