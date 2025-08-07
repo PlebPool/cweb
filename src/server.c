@@ -34,7 +34,7 @@ void thread_close_fd(void* fd) {
     close(*(int*) fd);
 }
 
-void sig_handler(int signo) {
+void sig_handler(const int signo) {
     syslog(LOG_INFO, "Received signal %d", signo);
     exit_flag = 1;
 }
@@ -66,7 +66,7 @@ void server_destroy(const server_t* server) {
     server = NULL;
 }
 
-int server_set_port(server_t* server, unsigned short port) {
+int server_set_port(server_t* server, const unsigned short port) {
     server->port = port;
     return 0;
 }
@@ -97,7 +97,7 @@ int server_set_opt(server_t* server, const int s_o_opt, void* s_o_arg) {
 }
 
 void handle_request(void* fd_in) {
-    int fd = *(int*) fd_in;
+    const int fd = *(int*) fd_in;
     char buffer[1024];
     const ssize_t n = recv(fd, buffer, sizeof(buffer), 0);
     if (n < 0) {
@@ -123,7 +123,7 @@ void handle_request(void* fd_in) {
     close(fd);
 }
 
-int epoll_on_socket(int sock_fd) {
+int epoll_on_socket(const int sock_fd) {
     int epoll_fd = epoll_create1(0);
     pthread_cleanup_push(thread_close_fd, &epoll_fd);
 
@@ -150,7 +150,7 @@ int epoll_on_socket(int sock_fd) {
 
         for (int i = 0; i < nfds; i++) {
             if (events[i].data.fd == sock_fd) { // Connection incoming.
-                int client_fd = accept(sock_fd, NULL, NULL);
+                const int client_fd = accept(sock_fd, NULL, NULL);
                 if (client_fd < 0) {
                     syslog(LOG_ERR, "accept() failed %s", strerror(errno));
                     pthread_exit(NULL);
@@ -171,7 +171,7 @@ int epoll_on_socket(int sock_fd) {
     pthread_cleanup_pop(1);
 }
 
-void* server_thread_func(void* server_ptr) {
+void* server_thread_func(const void* server_ptr) {
     const server_t* server = server_ptr;
     if (server->ascii_art_path != NULL) {
         print_file(server->ascii_art_path->buffer);
