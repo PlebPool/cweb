@@ -16,6 +16,10 @@ This library depends on my string library. https://github.com/PlebPool/cstring
     server_set_opt(server, S_O_ASCII_ART_LOCATION, ascii_art);
     cstring_destroy(ascii_art);
 
+    cstring_t* index_page = cstring_create("./resources/index.html");
+    server_set_opt(server, S_O_INDEX_PAGE_FILE_LOCATION, index_page);
+    cstring_destroy(index_page);
+
     cstring_t* static_resource = cstring_create("/var/www");
     server_set_opt(server, S_O_STATIC_RESOURCE_LOCATION, static_resource);
     cstring_destroy(static_resource);

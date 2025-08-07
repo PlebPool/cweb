@@ -9,6 +9,8 @@
 #include <linux/limits.h>
 #include <sys/syslog.h>
 
+#include "cstring.h"
+
 
 void print_file(const char* filename) {
     char path[PATH_MAX];

@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <linux/limits.h>
 
 #include "cstring.h"
 #include <unistd.h>
@@ -24,6 +23,7 @@
 #include <sys/syscall.h>
 
 #include "wthread.h"
+#include <whttp.h>
 #include <wfile.h>
 
 threadpool_t *threadpool;
@@ -99,9 +99,14 @@ void handle_request(void* fd_in) {
         return;
     }
     buffer[n] = '\0';
+    cstring_t* request = cstring_create(buffer);
+    parse_http_request(request);
+    cstring_destroy(request);
 
     const long pid = syscall(SYS_gettid);
     syslog(LOG_INFO, "Request from fd %i is being handled by thread %li", fd, pid);
+
+
 
     memset(buffer, 0, sizeof(buffer)); // Reusing buffer for response
 

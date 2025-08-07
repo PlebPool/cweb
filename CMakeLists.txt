@@ -13,6 +13,8 @@ add_library(cweb STATIC library.c
         include/wthread.h
         src/wfile.c
         include/wfile.h
+        src/whttp.c
+        include/whttp.h
 )
 
 target_include_directories(cweb PUBLIC include)
