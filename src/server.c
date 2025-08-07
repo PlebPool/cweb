@@ -24,6 +24,7 @@
 #include <sys/syscall.h>
 
 #include "wthread.h"
+#include <wfile.h>
 
 threadpool_t *threadpool;
 
@@ -37,24 +38,6 @@ void thread_close_fd(void* fd) {
 void sig_handler(const int signo) {
     syslog(LOG_INFO, "Received signal %d", signo);
     exit_flag = 1;
-}
-
-void print_file(const char* filename) {
-    char path[PATH_MAX];
-    snprintf(path, sizeof(path), "%s", filename);
-    FILE *fp = fopen(path, "r");
-
-    if (fp == NULL) {
-        syslog(LOG_ERR, "cannot open file %s: %s", path, strerror(errno));
-        return;
-    }
-
-    int ch;
-    while ((ch = fgetc(fp)) != EOF) {
-        printf("%c", ch);
-    }
-
-    fclose(fp);
 }
 
 int server_init(server_t* server) {
@@ -171,7 +154,8 @@ int epoll_on_socket(const int sock_fd) {
     pthread_cleanup_pop(1);
 }
 
-void* server_thread_func(const void* server_ptr) {
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+void* server_thread_func(void* server_ptr) {
     const server_t* server = server_ptr;
     if (server->ascii_art_path != NULL) {
         print_file(server->ascii_art_path->buffer);
