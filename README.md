@@ -18,7 +18,7 @@ Example usage. (it doesn't work in production environments atm)
     server_set_opt(server, S_O_STATIC_RESOURCE_LOCATION, static_resource);
     cstring_destroy(static_resource);
 
-    server_start(server);
+    server_start(server); // Main loop.
 
     server_destroy(server);
 
