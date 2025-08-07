@@ -20,6 +20,9 @@
 #include <signal.h>
 #include <stdatomic.h>
 
+#include <sys/types.h>
+#include <sys/syscall.h>
+
 #include "wthread.h"
 
 threadpool_t *threadpool;
@@ -93,6 +96,33 @@ int server_set_opt(server_t* server, const int s_o_opt, void* s_o_arg) {
     }
 }
 
+void handle_request(void* fd_in) {
+    int fd = *(int*) fd_in;
+    char buffer[1024];
+    const ssize_t n = recv(fd, buffer, sizeof(buffer), 0);
+    if (n < 0) {
+        syslog(LOG_ERR, "recv() failed %s", strerror(errno));
+        return;
+    }
+    buffer[n] = '\0';
+
+    const long pid = syscall(SYS_gettid);
+    syslog(LOG_INFO, "Request from fd %i is being handled by thread %li", fd, pid);
+
+    /*for (int i = 0; i < n; i++) {
+        if (buffer[i] != '\r') {
+            printf("%c", buffer[i]);
+        }
+    }*/
+
+    // Logic to handle the request.
+    send(fd, "Hello, world2!\n", 14, 0);
+
+    // Closing connection.
+    shutdown(fd, SHUT_WR);
+    close(fd);
+}
+
 int epoll_on_socket(int sock_fd) {
     int epoll_fd = epoll_create1(0);
     pthread_cleanup_push(thread_close_fd, &epoll_fd);
@@ -131,10 +161,9 @@ int epoll_on_socket(int sock_fd) {
                     syslog(LOG_ERR, "epoll_ctl() failed %s", strerror(errno));
                 }
             } else { // Existing connection sending.
-                send(events[i].data.fd, "Hello, world!\n", 14, 0);
-                shutdown(events[i].data.fd, SHUT_WR);
+                threadpool_add_task(threadpool, handle_request, &events[i].data.fd);
                 epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-                close(events[i].data.fd);
+                // TODO: We currently consider it handled when it's turned over to a thread. (Might be bad)
             }
         }
     }
@@ -164,7 +193,7 @@ void* server_thread_func(void* server_ptr) {
 
 int server_start(server_t* server) {
     threadpool = threadpool_create(4);
-    syslog(LOG_INFO, "Server starting up...");
+    syslog(LOG_INFO, "Server starting up on port %i", server->port);
     pthread_create(&server_thread, NULL, server_thread_func, server);
 
     signal(SIGTERM, sig_handler);
@@ -176,9 +205,9 @@ int server_start(server_t* server) {
         sleep(1);
     }
 
-    syslog(LOG_INFO, "Server shutdown complete");
     pthread_cancel(server_thread);
     pthread_join(server_thread, NULL);
+    syslog(LOG_INFO, "Server shutdown complete");
 
     threadpool_destroy(threadpool);
     return 0;
