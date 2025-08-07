@@ -27,6 +27,7 @@
 #include <wfile.h>
 
 threadpool_t *threadpool;
+server_t* server;
 
 pthread_t server_thread;
 int exit_flag = 0;
@@ -55,7 +56,7 @@ int server_set_port(server_t* server, const unsigned short port) {
 }
 
 int server_set_ascii_art(server_t* server, const cstring_t* ascii_art_path) {
-    cstring_t* string = malloc(sizeof(cstring_t));
+    cstring_t* string = malloc(sizeof(cstring_t)); // TODO: Put this in cstring_copy
     string->buffer = malloc(ascii_art_path->size);
     memcpy(string->buffer, ascii_art_path->buffer, ascii_art_path->size);
     server->ascii_art_path = string;
@@ -63,6 +64,14 @@ int server_set_ascii_art(server_t* server, const cstring_t* ascii_art_path) {
 }
 
 int server_set_static_resource(server_t* server, const cstring_t* static_resource_path) {
+    return 0; // TODO: Does nothing.
+}
+
+int server_set_index_page_file(server_t* server, const cstring_t* index_page_file_path) {
+    cstring_t* string = malloc(sizeof(cstring_t)); // TODO: Put this in cstring_copy
+    string->buffer = malloc(index_page_file_path->size);
+    memcpy(string->buffer, index_page_file_path->buffer, index_page_file_path->size);
+    server->index_html_path = string;
     return 0;
 }
 
@@ -74,6 +83,8 @@ int server_set_opt(server_t* server, const int s_o_opt, void* s_o_arg) {
             return server_set_ascii_art(server, s_o_arg);
         case S_O_STATIC_RESOURCE_LOCATION:
             return server_set_static_resource(server, s_o_arg);
+        case S_O_INDEX_PAGE_FILE_LOCATION:
+            return server_set_index_page_file(server, s_o_arg);
         default:
             return -1;
     }
@@ -81,8 +92,8 @@ int server_set_opt(server_t* server, const int s_o_opt, void* s_o_arg) {
 
 void handle_request(void* fd_in) {
     const int fd = *(int*) fd_in;
-    char buffer[1024];
-    const ssize_t n = recv(fd, buffer, sizeof(buffer), 0);
+    char* buffer = malloc(sizeof(char) * 8096);
+    const ssize_t n = recv(fd, buffer, 8096, 0);
     if (n < 0) {
         syslog(LOG_ERR, "recv() failed %s", strerror(errno));
         return;
@@ -92,18 +103,20 @@ void handle_request(void* fd_in) {
     const long pid = syscall(SYS_gettid);
     syslog(LOG_INFO, "Request from fd %i is being handled by thread %li", fd, pid);
 
-    /*for (int i = 0; i < n; i++) {
-        if (buffer[i] != '\r') {
-            printf("%c", buffer[i]);
-        }
-    }*/
+    memset(buffer, 0, sizeof(buffer)); // Reusing buffer for response
+
+    const size_t size = file_into_buffer(server->index_html_path->buffer, buffer, 8096);
 
     // Logic to handle the request.
-    send(fd, "Hello, world2!\n", 14, 0);
+    const char* str = "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/html\r\n\r\n";
+    send(fd, str, strlen(str), 0);
+    send(fd, buffer, size, 0);
 
     // Closing connection.
     shutdown(fd, SHUT_WR);
     close(fd);
+    free(buffer);
 }
 
 int epoll_on_socket(const int sock_fd) {
@@ -156,7 +169,7 @@ int epoll_on_socket(const int sock_fd) {
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
 void* server_thread_func(void* server_ptr) {
-    const server_t* server = server_ptr;
+    server = server_ptr;
     if (server->ascii_art_path != NULL) {
         print_file(server->ascii_art_path->buffer);
     }
@@ -170,8 +183,6 @@ void* server_thread_func(void* server_ptr) {
     epoll_on_socket(sock_fd);
 
     pthread_cleanup_pop(1);
-
-    printf("server start on port %i\n", server->port);
     return NULL;
 }
 
