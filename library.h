@@ -1,6 +1,6 @@
-#ifndef UNTITLED22_LIBRARY_H
-#define UNTITLED22_LIBRARY_H
+#ifndef CWEB_LIBRARY_H
+#define CWEB_LIBRARY_H
 
 void hello(void);
 
-#endif //UNTITLED22_LIBRARY_H
+#endif //CWEB_LIBRARY_H

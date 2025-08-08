@@ -92,12 +92,24 @@ int server_set_opt(server_t* server, const int s_o_opt, void* s_o_arg) {
 
 void handle_request(void* fd_in) {
     const int fd = *(int*) fd_in;
-    char* buffer = malloc(sizeof(char) * 8096);
+    char* buffer = malloc(sizeof(char) * 8096 +1);
+    memset(buffer, 0, 8096 + 1);
     const ssize_t n = recv(fd, buffer, 8096, 0);
     if (n < 0) {
         syslog(LOG_ERR, "recv() failed %s", strerror(errno));
+        shutdown(fd, SHUT_WR); // TODO Move into cleanup function
+        close(fd);
+        free(buffer);
         return;
     }
+    if (n == 0) { // Client has closed connection.
+        syslog(LOG_ERR, "Connection closed by client");
+        shutdown(fd, SHUT_WR); // TODO Move into cleanup function
+        close(fd);
+        free(buffer);
+        return;
+    }
+
     buffer[n] = '\0';
     cstring_t* request = cstring_create(buffer);
     parse_http_request(request);
@@ -106,9 +118,7 @@ void handle_request(void* fd_in) {
     const long pid = syscall(SYS_gettid);
     syslog(LOG_INFO, "Request from fd %i is being handled by thread %li", fd, pid);
 
-
-
-    memset(buffer, 0, sizeof(buffer)); // Reusing buffer for response
+    memset(buffer, 0, 8096 + 1); // Reusing buffer for response
 
     const size_t size = file_into_buffer(server->index_html_path->buffer, buffer, 8096);
 
