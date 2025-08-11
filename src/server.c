@@ -6,11 +6,9 @@
 
 #include <errno.h>
 #include <signal.h>
-#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <bits/signum-generic.h>
 #include <sys/syslog.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
@@ -26,6 +24,11 @@ SSL_CTX* ctx = NULL;
 void thread_close_fd(void *arg) {
     const int *fd = arg;
     close(*fd);
+}
+
+void thread_destroy_threadpool(void *arg) {
+    threadpool_t *pool = arg;
+    threadpool_destroy(pool);
 }
 
 SSL_CTX* initialize_openssl() {
@@ -44,21 +47,21 @@ SSL_CTX* initialize_openssl() {
 }
 
 void https_handler(void *arg) {
-    int fd = *(int *)arg;
-    char buffer[1024];
-    ssize_t nread;
+    const int fd = *(int *)arg;
+    char buffer[8096];
 
     SSL *ssl = SSL_new(ctx);
     SSL_set_fd(ssl, fd);
 
-    if (SSL_accept(ssl) <= 0) {
+    if (SSL_accept(ssl) < 0) {
         syslog(LOG_ERR, "SSL_accept() failed %s", strerror(errno));
         return;
     }
-    syslog(LOG_INFO, "SSL connection accepted");
-    nread = SSL_read(ssl, buffer, sizeof(buffer));
 
-    for (int i = 0; i < nread; i++) {
+    syslog(LOG_INFO, "SSL connection accepted");
+    const ssize_t n_read = SSL_read(ssl, buffer, sizeof(buffer));
+
+    for (int i = 0; i < n_read; i++) {
         if (buffer[i] != '\r') {
             printf("%c", buffer[i]);
         }
@@ -74,17 +77,16 @@ void https_handler(void *arg) {
 }
 
 void http_handler(void *arg) {
-    int fd = *(int *)arg;
-    char buffer[1024];
-    ssize_t nread;
+    const int fd = *(int *)arg;
+    char buffer[8096];
 
-    nread = recv(fd, buffer, sizeof(buffer), 0);
-    if (nread < 0) {
+    const ssize_t n_read = recv(fd, buffer, sizeof(buffer), 0);
+    if (n_read < 0) {
         syslog(LOG_ERR, "recv() failed %s", strerror(errno));
         return;
     }
 
-    for (int i = 0; i < nread; i++) {
+    for (int i = 0; i < n_read; i++) {
         if (buffer[i] != '\r') {
             printf("%c", buffer[i]);
         }
@@ -110,10 +112,8 @@ int epoll_on_socket(const int sock_fd, threadpool_t *threadpool, void (*handle_r
         pthread_exit(NULL);
     }
 
-    syslog(LOG_INFO, "Entering main loop");
-
     for (;;) {
-        // Cancellation point. // Wait for ready list.
+        // Cancellation point. // Wait for a ready list.
         const int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
         if (nfds < 0) {
             syslog(LOG_ERR, "epoll_wait() failed: %s", strerror(errno));
@@ -141,6 +141,7 @@ int epoll_on_socket(const int sock_fd, threadpool_t *threadpool, void (*handle_r
     }
 
     pthread_cleanup_pop(1);
+    return 0;
 }
 
 void* server_start(void* arg) {
@@ -148,15 +149,15 @@ void* server_start(void* arg) {
 
     // Create socket // bind, listen...
     const int sock_fd = wsocket_create_listen(config->port);
+    pthread_cleanup_push(thread_close_fd, &sock_fd);
     if (sock_fd < 0) {
         syslog(LOG_ERR, "Failed to create socket: %s", strerror(errno));
         return NULL;
     }
 
-    syslog(LOG_INFO, "Socket created on port %i", config->port);
-
     void (*handler)(void *arg) = NULL;
     if (config->tls) {
+        // SSL init
         if (ctx == NULL) {
             SSL_CTX* ctx_tmp = initialize_openssl();
             if (ctx_tmp == NULL) {
@@ -171,20 +172,24 @@ void* server_start(void* arg) {
             }
         }
         handler = https_handler;
+        syslog(LOG_INFO, "HTTPS server created on port %i", config->port);
     } else {
         handler = http_handler;
+        syslog(LOG_INFO, "HTTP server created on port %i", config->port);
     }
 
     threadpool_t *pool = threadpool_create(config->thread_count);
+    pthread_cleanup_push(thread_destroy_threadpool, pool);
 
-    epoll_on_socket(sock_fd, pool, handler);
+    epoll_on_socket(sock_fd, pool, handler); // Main loop.
 
     if (config->tls) {
-        // Perform SSL cleanup
+        // SSL cleanup
         SSL_CTX_free(ctx);
         EVP_cleanup();
     }
 
-    threadpool_destroy(pool);
+    pthread_cleanup_pop(1);
+    pthread_cleanup_pop(1);
     return NULL;
 }
